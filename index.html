@@ -1,0 +1,882 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Маркет — продажи</title>
+  <style>
+    :root {
+      --bg:#ffffff; --card:#ffffff; --ink:#08111f; --muted:#667085;
+      --line:#d9e0ff; --accent:#173DFF; --accent-soft:#eef2ff; --danger:#d92d20;
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, sans-serif; background:var(--bg); color:var(--ink); }
+    header { padding:18px 16px; border-bottom:1px solid var(--line); background:#fff; position:sticky; top:0; z-index:3; }
+    h1 { margin:0 0 10px; font-size:22px; letter-spacing:-.03em; }
+    .wrap { display:grid; grid-template-columns: 1fr 390px; gap:16px; padding:16px; max-width:1280px; margin:auto; }
+    .panel { background:var(--card); border:1px solid var(--line); border-radius:22px; padding:16px; box-shadow: 0 12px 34px rgba(23,61,255,.06); }
+    .topbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    input, select, button, textarea {
+      font: inherit; border:1px solid var(--line); border-radius:14px; padding:11px 13px; background:#fff;
+    }
+    input:focus, select:focus, textarea:focus { outline:2px solid var(--accent-soft); border-color:var(--accent); }
+    button { cursor:pointer; border:none; background:var(--accent); color:#fff; font-weight:750; transition:.12s transform ease, .12s opacity ease; }
+    button:active { transform:scale(.98); }
+    button.secondary { background:var(--accent-soft); color:var(--accent); border:1px solid var(--line); }
+    button.accent { background:var(--accent); }
+    button.danger { background:var(--danger); }
+    button.small { padding:6px 9px; border-radius:8px; font-size:13px; }
+    .search-wrap { position:relative; width:min(480px, 100%); }
+    .search { width:100%; padding-right:44px; }
+    .clear-search {
+      position:absolute; right:8px; top:50%; transform:translateY(-50%);
+      width:30px; height:30px; border-radius:50%; padding:0;
+      background:var(--accent-soft); color:var(--accent); display:none;
+      align-items:center; justify-content:center; font-size:20px; line-height:1;
+    }
+    .clear-search.visible { display:flex; }
+    .cart-title-row { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+    .cart-toggle { display:none; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap:10px; margin-top:14px; }
+    .product { border:1px solid var(--product-border, var(--line)); border-radius:18px; padding:12px; background:var(--product-bg, #fff); color:var(--product-text, var(--ink)); min-height:120px; display:flex; flex-direction:column; justify-content:space-between; box-shadow: 0 8px 20px rgba(23,61,255,.04); }
+    .product b { font-size:14px; line-height:1.2; color:var(--product-text, var(--ink)); }
+    .meta { color:var(--product-muted, var(--muted)); font-size:12px; margin-top:4px; }
+    .price { font-weight:900; font-size:19px; margin-top:8px; color:var(--product-text, var(--accent)); }
+    .cart-row, .sale-row, .summary-row { display:grid; grid-template-columns: 1fr auto auto; gap:8px; align-items:center; border-bottom:1px solid var(--line); padding:8px 0; }
+    .qty { display:flex; gap:4px; align-items:center; }
+    .qty span { min-width:24px; text-align:center; font-weight:700; }
+    .total { font-size:28px; font-weight:900; text-align:right; margin:14px 0; }
+    .muted { color:var(--muted); font-size:13px; }
+    details { border:1px solid var(--line); border-radius:14px; background:#fff; margin:10px 0; overflow:hidden; }
+    summary { cursor:pointer; padding:12px; font-weight:800; list-style:none; display:flex; justify-content:space-between; gap:12px; align-items:center; }
+    summary::-webkit-details-marker { display:none; }
+    summary::after { content:'▾'; color:var(--muted); }
+    details:not([open]) summary::after { content:'▸'; }
+    .details-body { padding:0 12px 12px; }
+    .check-items { margin-top:8px; border-top:1px solid var(--line); }
+    .check-item { display:grid; grid-template-columns: 1fr auto auto; gap:8px; padding:7px 0; border-bottom:1px solid var(--line); }
+    .check-item:last-child { border-bottom:none; }
+    .app-tabs { display:flex; gap:8px; padding:16px; max-width:1280px; margin:0 auto; flex-wrap:wrap; }
+    .app-tab { background:#fff; color:var(--accent); border:1px solid var(--line); }
+    .app-tab.active { background:var(--accent); color:#fff; }
+    .app-section.hidden { display:none; }
+    .stock-input { width:92px; padding:8px 10px; }
+    .warehouse-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .stock-low { color:var(--danger); font-weight:800; }
+    .stock-ok { color:var(--accent); font-weight:800; }
+    .tabs { display:flex; gap:8px; margin-top:10px; flex-wrap:wrap; }
+    .tab { background:#fff; color:var(--accent); border:1px solid var(--line); }
+    .tab.active { background:var(--accent); color:#fff; }
+    .hidden { display:none; }
+    .stock-input { width:92px; padding:8px 10px; }
+    .warehouse-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+    .stock-low { color:var(--danger); font-weight:800; }
+    .stock-ok { color:var(--accent); font-weight:800; }
+    table { width:100%; border-collapse: collapse; font-size:14px; }
+    th, td { border-bottom:1px solid var(--line); padding:8px; text-align:left; }
+    th { color:var(--muted); font-weight:650; }
+    @media (max-width: 900px) {
+      .wrap { grid-template-columns:1fr; padding:10px; padding-bottom:92px; }
+      header { position:static; }
+      .cart {
+        position:fixed; left:10px; right:10px; bottom:10px; z-index:10;
+        border-radius:22px; max-height:78vh; overflow:auto;
+      }
+      .cart-toggle { display:inline-flex; }
+      .cart.collapsed { padding:12px 14px; }
+      .cart.collapsed .cart-body { display:none; }
+      .cart.collapsed .cart-title-row h2::after {
+        content:' · ' attr(data-mobile-total);
+        color:var(--accent); font-weight:900;
+      }
+      .cart.collapsed.has-items .cart-title-row h2::before {
+        content: attr(data-mobile-count) ' · ';
+        color:var(--muted); font-size:14px; font-weight:700;
+      }
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Маркет — продажи</h1>
+  <div class="muted" style="margin-top:8px">Мини-приложение для продаж на маркете и складского учёта</div>
+</header>
+
+<nav class="app-tabs">
+  <button class="app-tab active" data-app-tab="market">Маркет</button>
+  <button class="app-tab" data-app-tab="warehouse">Склад</button>
+</nav>
+
+<section class="app-section" id="marketSection">
+<main class="wrap">
+  <section class="panel" style="grid-column:1 / -1">
+    <h2 style="margin-top:0">Файлы маркета</h2>
+    <div class="topbar">
+      <input id="file" type="file" accept=".csv" />
+      <button class="secondary" id="downloadTemplate">Скачать шаблон товаров</button>
+      <button class="secondary" id="exportSales">Выгрузить продажи CSV</button>
+      <button class="secondary" id="exportItems">Выгрузить товары CSV</button>
+      <button class="danger" id="clearDay">Очистить продажи дня</button>
+    </div>
+    <div class="muted" style="margin-top:8px">Импорт товаров: CSV с колонками sku,name,category,fandom,price,stock</div>
+  </section>
+  <section class="panel">
+    <div class="tabs">
+      <button class="tab active" data-tab="products">Продажа</button>
+      <button class="tab" data-tab="report">Отчёт дня</button>
+      <button class="tab" data-tab="stock">Остатки</button>
+    </div>
+
+    <div id="productsTab">
+      <div class="topbar" style="margin-top:14px">
+        <div class="search-wrap">
+          <input class="search" id="search" placeholder="Поиск: открытка, стикер, артикул..." autofocus />
+          <button class="clear-search" id="clearSearch" type="button" aria-label="Очистить поиск">×</button>
+        </div>
+        <select id="categoryFilter"><option value="">Все категории</option></select>
+      </div>
+      <div class="grid" id="products"></div>
+    </div>
+
+    <div id="reportTab" class="hidden">
+      <h2>Продажи за день</h2>
+      <div id="daySummary"></div>
+      <h3>Чеки</h3>
+      <div id="salesList"></div>
+    </div>
+
+    <div id="stockTab" class="hidden">
+      <h2>Остатки после продаж</h2>
+      <div id="stockTable"></div>
+    </div>
+  </section>
+
+  <aside class="panel cart">
+    <div class="cart-title-row">
+      <h2 style="margin:0">Текущая продажа</h2>
+      <button class="small secondary cart-toggle" id="cartToggle">Свернуть</button>
+    </div>
+    <div class="cart-body" id="cartBody">
+      <div id="cart"></div>
+    <div class="total" id="total">0 ₽</div>
+    <div class="topbar">
+      <select id="payment">
+        <option>Карта</option>
+        <option>Наличные</option>
+        <option>Перевод</option>
+      </select>
+      <input id="discount" type="number" min="0" step="1" placeholder="Скидка ₽" style="width:130px" />
+    </div>
+    <textarea id="note" placeholder="Комментарий к продаже" rows="2" style="width:100%; margin-top:8px"></textarea>
+    <div class="topbar" style="margin-top:10px">
+        <button class="accent" id="saveSale">Сохранить продажу</button>
+        <button class="secondary" id="clearCart">Очистить чек</button>
+      </div>
+    </div>
+  </aside>
+</main>
+</section>
+
+<section class="app-section hidden" id="warehouseSection">
+  <main style="max-width:1280px; margin:0 auto; padding:16px;">
+    <section class="panel">
+      <h2 style="margin-top:0">Склад</h2>
+      <p class="muted">Здесь можно обновлять наличие вручную или загрузить CSV. Продажи с маркета автоматически вычитаются из остатков, если в товаре указан stock.</p>
+
+      <div class="topbar" style="margin-top:12px">
+        <input id="stockFile" type="file" accept=".csv" />
+        <button class="secondary" id="downloadStockTemplate">Скачать шаблон склада</button>
+        <button class="secondary" id="exportWarehouse">Выгрузить склад CSV</button>
+      </div>
+
+      <h3>Учёт продаж</h3>
+      <div class="topbar" style="margin-top:8px">
+        <input id="marketSalesFile" type="file" accept=".csv" />
+        <button class="secondary" id="clearImportedSales">Очистить импортированные продажи</button>
+      </div>
+      <div class="muted" style="margin-top:8px">Можно загрузить CSV-выгрузку продаж с вкладки «Маркет». Склад учтёт даты и количество проданных товаров.</div>
+
+      <div class="topbar" style="margin-top:14px">
+        <div class="search-wrap">
+          <input class="search" id="warehouseSearch" placeholder="Поиск по складу: товар, артикул, фандом..." />
+          <button class="clear-search" id="clearWarehouseSearch" type="button" aria-label="Очистить поиск">×</button>
+        </div>
+        <select id="warehouseFandomFilter"><option value="">Все фандомы</option></select>
+      </div>
+
+      <div id="warehouseSummary" style="margin-top:14px"></div>
+      <div id="warehouseTable" style="margin-top:12px"></div>
+    </section>
+  </main>
+</section>
+
+<script>
+const rub = n => new Intl.NumberFormat('ru-RU').format(Math.round(Number(n)||0)) + ' ₽';
+const todayKey = () => new Date().toISOString().slice(0,10);
+
+function normalizeFandom(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace('ё', 'е');
+}
+
+function fandomStyle(fandom) {
+  const key = normalizeFandom(fandom);
+  const styles = {
+    'формула 1': { bg:'#FF3D4F', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+    'f1': { bg:'#FF3D4F', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+    'теннис': { bg:'#FF3D4F', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+
+    'dc': { bg:'#173DFF', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+
+    'мерлин': { bg:'#FFDA0B', text:'#FF3D4F', muted:'rgba(255,61,79,.78)' },
+    'kcd': { bg:'#FFDA0B', text:'#FF3D4F', muted:'rgba(255,61,79,.78)' },
+
+    'мародеры': { bg:'#FF9933', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+    'marauders': { bg:'#FF9933', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+
+    'music': { bg:'#FF74BC', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+    'музыка': { bg:'#FF74BC', text:'#FFFFFF', muted:'rgba(255,255,255,.78)' },
+
+    'ориджинал': { bg:'#8AC9FF', text:'#173DFF', muted:'rgba(23,61,255,.76)' },
+    'original': { bg:'#8AC9FF', text:'#173DFF', muted:'rgba(23,61,255,.76)' },
+
+    'ганнибал': { bg:'#C4F31C', text:'#173DFF', muted:'rgba(23,61,255,.76)' },
+    'hannibal': { bg:'#C4F31C', text:'#173DFF', muted:'rgba(23,61,255,.76)' },
+    'аркейн': { bg:'#C4F31C', text:'#173DFF', muted:'rgba(23,61,255,.76)' },
+    'arcane': { bg:'#C4F31C', text:'#173DFF', muted:'rgba(23,61,255,.76)' }
+  };
+
+  const s = styles[key] || { bg:'#FFFFFF', text:'#08111f', muted:'#667085' };
+  return `--product-bg:${s.bg}; --product-text:${s.text}; --product-muted:${s.muted}; --product-border:${s.bg};`;
+}
+
+let products = JSON.parse(localStorage.getItem('market_products') || '[]');
+let sales = JSON.parse(localStorage.getItem('market_sales_' + todayKey()) || '[]');
+sales = sales.map((s, i) => ({...s, checkNumber: s.checkNumber || i + 1}));
+let importedMarketSales = JSON.parse(localStorage.getItem('market_imported_sales') || '[]');
+let cart = [];
+
+function saveProducts(){ localStorage.setItem('market_products', JSON.stringify(products)); }
+function saveSales(){ localStorage.setItem('market_sales_' + todayKey(), JSON.stringify(sales)); }
+function saveImportedMarketSales(){ localStorage.setItem('market_imported_sales', JSON.stringify(importedMarketSales)); }
+
+function parseCSV(text) {
+  text = String(text || '').replace(/^\ufeff/, '');
+  const firstLine = text.split(/\r?\n/)[0] || '';
+  const delimiter = (firstLine.match(/;/g) || []).length > (firstLine.match(/,/g) || []).length ? ';' : ',';
+  const rows = [];
+  let row = [], cell = '', q = false;
+  for (let i=0; i<text.length; i++) {
+    const c = text[i], n = text[i+1];
+    if (c === '"' && q && n === '"') { cell += '"'; i++; }
+    else if (c === '"') q = !q;
+    else if (c === delimiter && !q) { row.push(cell); cell=''; }
+    else if ((c === '\n' || c === '\r') && !q) {
+      if (cell || row.length) { row.push(cell); rows.push(row); row=[]; cell=''; }
+      if (c === '\r' && n === '\n') i++;
+    } else cell += c;
+  }
+  if (cell || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+function toCSV(rows) {
+  // Разделитель ; лучше открывается в русской локали Excel.
+  return rows.map(r => r.map(v => `"${String(v ?? '').replaceAll('"','""')}"`).join(';')).join('\n');
+}
+function download(name, content) {
+  // BOM нужен, чтобы Excel корректно понял UTF-8 и не превратил кириллицу в кракозябры.
+  const blob = new Blob(['\ufeff' + content], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function saleDateKey(value) {
+  const s = String(value || '').trim();
+  const m = s.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+  if (m) return `${m[3]}-${m[2]}-${m[1]}`;
+  const iso = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  return todayKey();
+}
+
+function getAllSalesRecords() {
+  const records = [];
+  sales.forEach(s => s.items.forEach(i => {
+    records.push({
+      source:'Маркет',
+      checkNumber:s.checkNumber || '',
+      technicalId:s.id || '',
+      date:saleDateKey(s.date),
+      datetime:s.date || '',
+      sku:i.sku || '',
+      name:i.name || '',
+      category:i.category || '',
+      fandom:i.fandom || '',
+      price:Number(i.price || 0),
+      qty:Number(i.qty || 0),
+      sum:Number(i.sum || 0)
+    });
+  }));
+  importedMarketSales.forEach(r => records.push(r));
+
+  const seen = new Set();
+  return records.filter(r => {
+    const key = [r.source, r.date, r.checkNumber, r.technicalId, r.sku, r.name, r.qty, r.sum].join('|');
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function getSoldQtyByProduct() {
+  const sold = {};
+  getAllSalesRecords().forEach(r => {
+    const key = r.sku || r.name;
+    sold[key] = (sold[key] || 0) + Number(r.qty || 0);
+  });
+  return sold;
+}
+
+function getSoldDatesByProduct() {
+  const dates = {};
+  getAllSalesRecords().forEach(r => {
+    const key = r.sku || r.name;
+    const date = r.date || 'Без даты';
+    if (!dates[key]) dates[key] = {};
+    dates[key][date] = (dates[key][date] || 0) + Number(r.qty || 0);
+  });
+  return dates;
+}
+
+function productKey(p) {
+  return p.sku || p.name;
+}
+
+function normalizeHeaderName(name) {
+  return String(name || '').trim().toLowerCase();
+}
+
+
+function renderCategories(){
+  const sel = document.getElementById('categoryFilter');
+  const current = sel.value;
+  const cats = [...new Set(products.map(p => p.category).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Все категории</option>' + cats.map(c=>`<option>${c}</option>`).join('');
+  sel.value = current;
+}
+
+function renderProducts(){
+  renderCategories();
+  const q = document.getElementById('search').value.trim().toLowerCase();
+  const cat = document.getElementById('categoryFilter').value;
+  const list = products.filter(p => 
+    (!cat || p.category === cat) &&
+    (!q || [p.sku,p.name,p.category,p.fandom].join(' ').toLowerCase().includes(q))
+  );
+  document.getElementById('products').innerHTML = list.map(p => `
+    <div class="product" style="${fandomStyle(p.fandom)}">
+      <div>
+        <b>${p.name}</b>
+        <div class="meta">${p.sku || 'без артикула'} · ${p.category || 'без категории'}${p.fandom ? ' · '+p.fandom : ''}</div>
+        <div class="meta">остаток: ${p.stock ?? 0}</div>
+        <div class="price">${rub(p.price)}</div>
+      </div>
+      <button class="small accent" style="background:var(--product-text, var(--accent)); color:var(--product-bg, #fff);" onclick="addToCart('${p.id}')">Добавить</button>
+    </div>
+  `).join('') || '<p class="muted">Загрузите товары CSV или измените поиск.</p>';
+}
+
+function addToCart(id){
+  const p = products.find(x=>x.id===id);
+  if (!p) return;
+  const item = cart.find(x=>x.id===id);
+  if (item) item.qty++;
+  else cart.push({id, qty:1});
+  renderCart();
+}
+
+function changeQty(id, delta){
+  const item = cart.find(x=>x.id===id);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(x=>x.id!==id);
+  renderCart();
+}
+
+function renderCart(){
+  const discount = Number(document.getElementById('discount').value || 0);
+  let subtotal = 0;
+  document.getElementById('cart').innerHTML = cart.map(i => {
+    const p = products.find(x=>x.id===i.id);
+    const sum = (Number(p.price)||0) * i.qty;
+    subtotal += sum;
+    return `<div class="cart-row">
+      <div><b>${p.name}</b><div class="muted">${rub(p.price)} за шт.</div></div>
+      <div class="qty"><button class="small secondary" onclick="changeQty('${i.id}',-1)">−</button><span>${i.qty}</span><button class="small secondary" onclick="changeQty('${i.id}',1)">+</button></div>
+      <b>${rub(sum)}</b>
+    </div>`
+  }).join('') || '<p class="muted">Пока чек пустой.</p>';
+  const finalTotal = Math.max(0, subtotal - discount);
+  document.getElementById('total').textContent = rub(finalTotal);
+  const cartPanel = document.querySelector('.cart');
+  const cartTitle = document.querySelector('.cart-title-row h2');
+  const count = cart.reduce((s,i)=>s+i.qty,0);
+  cartTitle.setAttribute('data-mobile-total', rub(finalTotal));
+  cartTitle.setAttribute('data-mobile-count', count + ' шт.');
+  cartPanel.classList.toggle('has-items', count > 0);
+}
+
+function saveSale(){
+  if (!cart.length) return alert('Добавьте товары в чек.');
+  const discount = Number(document.getElementById('discount').value || 0);
+  const items = cart.map(i => {
+    const p = products.find(x=>x.id===i.id);
+    return { sku:p.sku, name:p.name, category:p.category, fandom:p.fandom || '', price:Number(p.price)||0, qty:i.qty, sum:(Number(p.price)||0)*i.qty };
+  });
+  const subtotal = items.reduce((s,i)=>s+i.sum,0);
+  const total = Math.max(0, subtotal - discount);
+  const sale = {
+    id: Date.now().toString(),
+    checkNumber: sales.length + 1,
+    date: new Date().toLocaleString('ru-RU'),
+    payment: document.getElementById('payment').value,
+    discount, subtotal, total,
+    note: document.getElementById('note').value.trim(),
+    items
+  };
+  sales.push(sale);
+  items.forEach(it => {
+    const p = products.find(x=>x.sku===it.sku && x.name===it.name);
+    if (p) p.stock = Number(p.stock || 0) - it.qty;
+  });
+  saveSales(); saveProducts();
+  cart = [];
+  document.getElementById('discount').value = '';
+  document.getElementById('note').value = '';
+  renderAll();
+}
+
+function renderReport(){
+  const totals = {};
+  sales.flatMap(s=>s.items).forEach(i => {
+    const key = i.sku + '|' + i.name;
+    if (!totals[key]) totals[key] = {...i, qty:0, sum:0};
+    totals[key].qty += i.qty; totals[key].sum += i.sum;
+  });
+
+  const totalMoney = sales.reduce((s,x)=>s+x.total,0);
+  const byPayment = sales.reduce((acc,s)=>{ acc[s.payment]=(acc[s.payment]||0)+s.total; return acc; }, {});
+  const totalItems = Object.values(totals).reduce((s,i)=>s+i.qty,0);
+
+  const soldItemsTable = `
+    <details>
+      <summary>
+        <span>Продано по товарам</span>
+        <span>${totalItems} шт. · ${rub(Object.values(totals).reduce((s,i)=>s+i.sum,0))}</span>
+      </summary>
+      <div class="details-body">
+        <table>
+          <thead><tr><th>Товар</th><th>Шт.</th><th>Сумма</th></tr></thead>
+          <tbody>
+            ${Object.values(totals).map(i=>`<tr><td>${i.name}<div class="muted">${i.sku}</div></td><td>${i.qty}</td><td>${rub(i.sum)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>`;
+
+  const fandomTotals = {};
+  sales.flatMap(s=>s.items).forEach(i => {
+    const key = i.fandom || 'Без фандома';
+    if (!fandomTotals[key]) fandomTotals[key] = { fandom:key, qty:0, sum:0 };
+    fandomTotals[key].qty += i.qty;
+    fandomTotals[key].sum += i.sum;
+  });
+
+  const fandomTable = `
+    <details>
+      <summary>
+        <span>Аналитика по фандомам</span>
+        <span>${Object.keys(fandomTotals).length} фанд.</span>
+      </summary>
+      <div class="details-body">
+        <table>
+          <thead><tr><th>Фандом</th><th>Шт.</th><th>Сумма</th></tr></thead>
+          <tbody>
+            ${Object.values(fandomTotals).sort((a,b)=>b.sum-a.sum).map(i=>`<tr><td>${i.fandom}</td><td>${i.qty}</td><td>${rub(i.sum)}</td></tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </details>`;
+
+  document.getElementById('daySummary').innerHTML = `
+    <p><b>Чеков:</b> ${sales.length} · <b>Выручка:</b> ${rub(totalMoney)}</p>
+    <p class="muted">${Object.entries(byPayment).map(([k,v])=>`${k}: ${rub(v)}`).join(' · ')}</p>
+    ${sales.length ? soldItemsTable : '<p class="muted">Продаж пока нет.</p>'}
+    ${sales.length ? fandomTable : ''}`;
+
+  document.getElementById('salesList').innerHTML = sales.slice().reverse().map(s => {
+    const qty = s.items.reduce((a,i)=>a+i.qty,0);
+    return `
+      <details>
+        <summary>
+          <span>
+            Чек №${s.checkNumber || (sales.indexOf(s) + 1)} · ${s.date}
+            <div class="muted">${s.payment}${s.note ? ' · '+s.note : ''}</div>
+          </span>
+          <span>${qty} шт. · ${rub(s.total)}</span>
+        </summary>
+        <div class="details-body">
+          <div class="check-items">
+            ${s.items.map(i=>`
+              <div class="check-item">
+                <div><b>${i.name}</b><div class="muted">${i.sku || ''}${i.category ? ' · '+i.category : ''}${i.fandom ? ' · '+i.fandom : ''}</div></div>
+                <div>${i.qty} × ${rub(i.price)}</div>
+                <b>${rub(i.sum)}</b>
+              </div>`).join('')}
+          </div>
+          ${s.discount ? `<p class="muted">Скидка по чеку: ${rub(s.discount)}</p>` : ''}
+          <p style="text-align:right; margin-bottom:0"><b>Итого: ${rub(s.total)}</b></p>
+        </div>
+      </details>`;
+  }).join('') || '<p class="muted">Продаж пока нет.</p>';
+}
+
+function renderStock(){
+  document.getElementById('stockTable').innerHTML = `<table><thead><tr><th>Артикул</th><th>Товар</th><th>Категория</th><th>Фандом</th><th>Цена</th><th>Остаток</th></tr></thead><tbody>
+    ${products.map(p=>`<tr><td>${p.sku}</td><td>${p.name}</td><td>${p.category}</td><td>${p.fandom || ''}</td><td>${rub(p.price)}</td><td>${p.stock}</td></tr>`).join('')}
+  </tbody></table>`;
+}
+
+
+function renderWarehouseFilters(){
+  const sel = document.getElementById('warehouseFandomFilter');
+  if (!sel) return;
+  const current = sel.value;
+  const fandoms = [...new Set(products.map(p => p.fandom).filter(Boolean))].sort();
+  sel.innerHTML = '<option value="">Все фандомы</option>' + fandoms.map(f=>`<option>${f}</option>`).join('');
+  sel.value = current;
+}
+
+function renderWarehouse(){
+  const table = document.getElementById('warehouseTable');
+  if (!table) return;
+
+  renderWarehouseFilters();
+
+  const sold = getSoldQtyByProduct();
+  const soldDates = getSoldDatesByProduct();
+  const q = document.getElementById('warehouseSearch')?.value.trim().toLowerCase() || '';
+  const fandom = document.getElementById('warehouseFandomFilter')?.value || '';
+
+  const list = products.filter(p =>
+    (!fandom || p.fandom === fandom) &&
+    (!q || [p.sku,p.name,p.category,p.fandom].join(' ').toLowerCase().includes(q))
+  );
+
+  const totalStock = products.reduce((s,p)=>s+(Number(p.stock)||0),0);
+  const totalSold = Object.values(sold).reduce((s,n)=>s+n,0);
+  const uniqueDates = [...new Set(getAllSalesRecords().map(r=>r.date))].sort();
+  document.getElementById('warehouseSummary').innerHTML = `
+    <p><b>Товаров в каталоге:</b> ${products.length} · <b>Остаток всего:</b> ${totalStock} шт. · <b>Продано учтено:</b> ${totalSold} шт. · <b>Даты продаж:</b> ${uniqueDates.length ? uniqueDates.join(', ') : 'нет'}</p>
+  `;
+
+  table.innerHTML = `<table>
+    <thead>
+      <tr>
+        <th>Товар</th>
+        <th>Фандом</th>
+        <th>Цена</th>
+        <th>Продажи по датам</th>
+        <th>В наличии</th>
+        <th>Действия</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${list.map(p => {
+        const key = productKey(p);
+        const soldQty = sold[key] || 0;
+        const datesText = Object.entries(soldDates[key] || {})
+          .sort(([a],[b])=>a.localeCompare(b))
+          .map(([date, qty])=>`${date}: ${qty} шт.`)
+          .join('<br>') || '<span class="muted">нет продаж</span>';
+        const stock = Number(p.stock || 0);
+        return `<tr>
+          <td><b>${p.name}</b><div class="muted">${p.sku || 'без артикула'} · ${p.category || 'без категории'}</div></td>
+          <td>${p.fandom || ''}</td>
+          <td>${rub(p.price)}</td>
+          <td>${datesText}<div class="muted">Всего: ${soldQty} шт.</div></td>
+          <td>
+            <input class="stock-input" type="number" step="1" value="${stock}" onchange="setProductStock('${p.id}', this.value)" />
+            <span class="${stock <= 0 ? 'stock-low' : 'stock-ok'}">${stock <= 0 ? 'нет' : 'шт.'}</span>
+          </td>
+          <td>
+            <div class="warehouse-actions">
+              <button class="small secondary" onclick="changeProductStock('${p.id}', -1)">−1</button>
+              <button class="small secondary" onclick="changeProductStock('${p.id}', 1)">+1</button>
+              <button class="small secondary" onclick="changeProductStock('${p.id}', 5)">+5</button>
+            </div>
+          </td>
+        </tr>`;
+      }).join('')}
+    </tbody>
+  </table>`;
+}
+
+function setProductStock(id, value){
+  const p = products.find(x=>x.id===id);
+  if (!p) return;
+  p.stock = Number(value || 0);
+  saveProducts();
+  renderAll();
+}
+
+function changeProductStock(id, delta){
+  const p = products.find(x=>x.id===id);
+  if (!p) return;
+  p.stock = Number(p.stock || 0) + delta;
+  saveProducts();
+  renderAll();
+}
+
+function importStockRows(rows){
+  if (!rows.length) return;
+  const header = rows.shift().map(normalizeHeaderName);
+  const idx = name => header.indexOf(name);
+  const get = (r, name) => idx(name) >= 0 ? r[idx(name)] : '';
+
+  rows.filter(r=>r.some(Boolean)).forEach((r, n) => {
+    const sku = get(r, 'sku');
+    const name = get(r, 'name');
+    const stockRaw = get(r, 'stock');
+    const incoming = {
+      id: (sku || name || Date.now() + '_' + n) + '_' + n,
+      sku,
+      name,
+      category: get(r, 'category'),
+      fandom: get(r, 'fandom'),
+      price: Number(String(get(r, 'price') || '0').replace(/\s/g,'').replace(',','.')),
+      stock: Number(String(stockRaw || '0').replace(/\s/g,''))
+    };
+
+    let existing = products.find(p => (sku && p.sku === sku) || (!sku && name && p.name === name));
+    if (existing) {
+      if (incoming.name) existing.name = incoming.name;
+      if (incoming.category) existing.category = incoming.category;
+      if (incoming.fandom) existing.fandom = incoming.fandom;
+      if (incoming.price) existing.price = incoming.price;
+      existing.stock = incoming.stock;
+    } else if (incoming.name) {
+      products.push(incoming);
+    }
+  });
+  saveProducts();
+  renderAll();
+}
+
+
+function importMarketSalesRows(rows){
+  if (!rows.length) return;
+  const header = rows.shift().map(normalizeHeaderName);
+  const idx = name => header.indexOf(name);
+  const get = (r, name) => idx(name) >= 0 ? r[idx(name)] : '';
+
+  const imported = rows.filter(r=>r.some(Boolean)).map(r => ({
+    source:'Маркет',
+    checkNumber:get(r, 'check_number') || get(r, 'sale_id') || '',
+    technicalId:get(r, 'technical_id') || get(r, 'sale_id') || '',
+    date:saleDateKey(get(r, 'date')),
+    datetime:get(r, 'date'),
+    sku:get(r, 'sku'),
+    name:get(r, 'name'),
+    category:get(r, 'category'),
+    fandom:get(r, 'fandom'),
+    price:Number(String(get(r, 'price') || '0').replace(/\s/g,'').replace(',','.')),
+    qty:Number(String(get(r, 'qty') || '0').replace(/\s/g,'').replace(',','.')),
+    sum:Number(String(get(r, 'item_sum') || '0').replace(/\s/g,'').replace(',','.'))
+  })).filter(r => r.name && r.qty);
+
+  const existingKeys = new Set(importedMarketSales.map(r => [r.source,r.date,r.checkNumber,r.technicalId,r.sku,r.name,r.qty,r.sum].join('|')));
+  let added = 0;
+  imported.forEach(r => {
+    const key = [r.source,r.date,r.checkNumber,r.technicalId,r.sku,r.name,r.qty,r.sum].join('|');
+    if (!existingKeys.has(key)) {
+      importedMarketSales.push(r);
+      existingKeys.add(key);
+      added++;
+    }
+  });
+
+  saveImportedMarketSales();
+  renderAll();
+  alert(`Импортировано строк продаж: ${added}`);
+}
+
+function renderAll(){ renderProducts(); renderCart(); renderReport(); renderStock(); renderWarehouse(); }
+
+document.getElementById('file').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  const rows = parseCSV(text).filter(r=>r.some(Boolean));
+  const header = rows.shift().map(h=>h.trim().toLowerCase());
+  const idx = name => header.indexOf(name);
+  products = rows.map((r, n) => ({
+    id: (r[idx('sku')] || r[idx('name')] || n) + '_' + n,
+    sku: r[idx('sku')] || '',
+    name: r[idx('name')] || '',
+    category: r[idx('category')] || '',
+    fandom: r[idx('fandom')] || '',
+    price: Number(String(r[idx('price')] || '0').replace(/\s/g,'').replace(',','.')),
+    stock: Number(String(r[idx('stock')] || '0').replace(/\s/g,''))
+  })).filter(p=>p.name);
+  saveProducts(); renderAll();
+});
+
+function updateSearchClearButton() {
+  document.getElementById('clearSearch').classList.toggle('visible', !!document.getElementById('search').value);
+}
+document.getElementById('search').addEventListener('input', () => {
+  updateSearchClearButton();
+  renderProducts();
+});
+document.getElementById('clearSearch').addEventListener('click', () => {
+  document.getElementById('search').value = '';
+  updateSearchClearButton();
+  renderProducts();
+  document.getElementById('search').focus();
+});
+document.getElementById('categoryFilter').addEventListener('change', renderProducts);
+document.getElementById('discount').addEventListener('input', renderCart);
+document.getElementById('saveSale').addEventListener('click', saveSale);
+
+function setCartCollapsed(collapsed) {
+  const panel = document.querySelector('.cart');
+  const btn = document.getElementById('cartToggle');
+  panel.classList.toggle('collapsed', collapsed);
+  btn.textContent = collapsed ? 'Открыть' : 'Свернуть';
+}
+document.getElementById('cartToggle').addEventListener('click', () => {
+  setCartCollapsed(!document.querySelector('.cart').classList.contains('collapsed'));
+});
+function applyMobileCartDefault() {
+  if (window.matchMedia('(max-width: 900px)').matches) setCartCollapsed(true);
+  else setCartCollapsed(false);
+}
+window.addEventListener('resize', applyMobileCartDefault);
+document.getElementById('clearCart').addEventListener('click', ()=>{ cart=[]; renderCart(); });
+
+document.querySelectorAll('.app-tab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.app-tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('marketSection').classList.toggle('hidden', btn.dataset.appTab !== 'market');
+  document.getElementById('warehouseSection').classList.toggle('hidden', btn.dataset.appTab !== 'warehouse');
+  renderAll();
+}));
+
+document.getElementById('warehouseSearch').addEventListener('input', () => {
+  document.getElementById('clearWarehouseSearch').classList.toggle('visible', !!document.getElementById('warehouseSearch').value);
+  renderWarehouse();
+});
+document.getElementById('clearWarehouseSearch').addEventListener('click', () => {
+  document.getElementById('warehouseSearch').value = '';
+  document.getElementById('clearWarehouseSearch').classList.remove('visible');
+  renderWarehouse();
+  document.getElementById('warehouseSearch').focus();
+});
+document.getElementById('warehouseFandomFilter').addEventListener('change', renderWarehouse);
+
+document.getElementById('stockFile').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  const rows = parseCSV(text).filter(r=>r.some(Boolean));
+  importStockRows(rows);
+  e.target.value = '';
+});
+
+document.getElementById('downloadStockTemplate').addEventListener('click', () => {
+  download('warehouse_template.csv', toCSV([
+    ['sku','name','category','fandom','price','stock'],
+    ['STK-001','Стикерпак котики','Стикеры','Ориджинал','350','20'],
+    ['CARD-001','Открытка зимняя','Открытки','Ориджинал','250','15']
+  ]));
+});
+
+document.getElementById('exportWarehouse').addEventListener('click', () => {
+  const soldDates = getSoldDatesByProduct();
+  const rows = [['sku','name','category','fandom','price','stock','sale_date','sold_qty']];
+  products.forEach(p => {
+    const dates = soldDates[productKey(p)] || {};
+    const entries = Object.entries(dates);
+    if (entries.length) {
+      entries.forEach(([date, qty]) => rows.push([p.sku,p.name,p.category,p.fandom || '',p.price,p.stock,date,qty]));
+    } else {
+      rows.push([p.sku,p.name,p.category,p.fandom || '',p.price,p.stock,'',0]);
+    }
+  });
+  download('warehouse_' + todayKey() + '.csv', toCSV(rows));
+});
+
+document.getElementById('marketSalesFile').addEventListener('change', async e => {
+  const file = e.target.files[0]; if (!file) return;
+  const text = await file.text();
+  const rows = parseCSV(text).filter(r=>r.some(Boolean));
+  importMarketSalesRows(rows);
+  e.target.value = '';
+});
+
+document.getElementById('clearImportedSales').addEventListener('click', () => {
+  if (confirm('Очистить только импортированные продажи? Продажи текущего дня из вкладки «Маркет» останутся.')) {
+    importedMarketSales = [];
+    saveImportedMarketSales();
+    renderAll();
+  }
+});
+
+document.getElementById('clearDay').addEventListener('click', ()=>{
+  if (confirm('Удалить продажи сегодняшнего дня? Остатки назад автоматически не вернутся.')) {
+    sales=[]; saveSales(); renderAll();
+  }
+});
+
+document.getElementById('downloadTemplate').addEventListener('click', () => {
+  download('products_template.csv', toCSV([
+    ['sku','name','category','fandom','price','stock'],
+    ['STK-001','Стикерпак котики','Стикеры','Ориджинал','350','20'],
+    ['CARD-001','Открытка зимняя','Открытки','Ориджинал','250','15']
+  ]));
+});
+
+document.getElementById('exportSales').addEventListener('click', () => {
+  const rows = [['check_number','date','payment','sku','name','category','fandom','price','qty','item_sum','discount_for_check','check_total','note','technical_id']];
+  sales.forEach(s => s.items.forEach(i => rows.push([s.checkNumber || '',s.date,s.payment,i.sku,i.name,i.category,i.fandom || '',i.price,i.qty,i.sum,s.discount,s.total,s.note,s.id])));
+  download('market_sales_' + todayKey() + '.csv', toCSV(rows));
+});
+
+document.getElementById('exportItems').addEventListener('click', () => {
+  const rows = [['sku','name','category','fandom','price','stock']];
+  products.forEach(p => rows.push([p.sku,p.name,p.category,p.fandom || '',p.price,p.stock]));
+  download('market_stock_' + todayKey() + '.csv', toCSV(rows));
+});
+
+document.querySelectorAll('.tab').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['products','report','stock'].forEach(t => document.getElementById(t+'Tab').classList.toggle('hidden', btn.dataset.tab !== t));
+  renderAll();
+}));
+
+if (!products.length) {
+  products = [
+    {id:'demo1', sku:'STK-001', name:'Стикерпак котики', category:'Стикеры', fandom:'Ориджинал', price:350, stock:20},
+    {id:'demo2', sku:'CARD-001', name:'Открытка зимняя', category:'Открытки', fandom:'Ориджинал', price:250, stock:15}
+  ];
+  saveProducts();
+}
+renderAll();
+updateSearchClearButton();
+applyMobileCartDefault();
+</script>
+</body>
+</html>
